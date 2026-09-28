@@ -6,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.config import settings
 from app.domain.models import CheckResult, Monitor
 from app.infrastructure.health_check_client import HealthCheckClient
+from app.infrastructure.metrics import (
+    celery_task_duration_seconds,
+    celery_tasks_total,
+)
 from app.workers.celery_app import celery_app
 
 logger = structlog.get_logger()
@@ -25,8 +29,21 @@ class DatabaseTask(Task):  # type: ignore[misc]
 @celery_app.task(bind=True, base=DatabaseTask, max_retries=3, default_retry_delay=60)  # type: ignore[untyped-decorator]
 def run_health_check(self: Task, monitor_id: str) -> dict[str, object]:
     import asyncio
+    import time
 
-    return asyncio.run(_run_health_check_async(self, monitor_id))
+    start = time.time()
+    result = asyncio.run(_run_health_check_async(self, monitor_id))
+    duration = time.time() - start
+
+    celery_task_duration_seconds.labels(
+        task_name="run_health_check"
+    ).observe(duration)
+    celery_tasks_total.labels(
+        task_name="run_health_check",
+        status=result.get("status", "unknown"),
+    ).inc()
+
+    return result
 
 
 async def _run_health_check_async(task: Task, monitor_id: str) -> dict[str, object]:
@@ -85,8 +102,20 @@ async def _run_health_check_async(task: Task, monitor_id: str) -> dict[str, obje
 @celery_app.task(bind=True, base=DatabaseTask)  # type: ignore[untyped-decorator]
 def run_all_health_checks(self: Task) -> dict[str, object]:
     import asyncio
+    import time
 
-    return asyncio.run(_run_all_health_checks_async(self))
+    start = time.time()
+    result = asyncio.run(_run_all_health_checks_async(self))
+    duration = time.time() - start
+
+    celery_task_duration_seconds.labels(
+        task_name="run_all_health_checks"
+    ).observe(duration)
+    celery_tasks_total.labels(
+        task_name="run_all_health_checks", status="success"
+    ).inc()
+
+    return result
 
 
 async def _run_all_health_checks_async(task: Task) -> dict[str, object]:

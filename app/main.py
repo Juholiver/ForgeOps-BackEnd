@@ -12,8 +12,11 @@ from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.health_check import router as health_check_router
 from app.api.incident import router as incident_router
+from app.api.metrics import router as metrics_router
+from app.api.metrics_middleware import MetricsMiddleware
 from app.api.middleware import RateLimitMiddleware
 from app.api.monitor import router as monitor_router
+from app.api.readiness import router as readiness_router
 from app.core.config import settings
 from app.infrastructure.database import get_db
 from app.infrastructure.health import check_database
@@ -40,7 +43,10 @@ app.include_router(monitor_router)
 app.include_router(health_check_router)
 app.include_router(incident_router)
 app.include_router(dashboard_router)
+app.include_router(metrics_router)
+app.include_router(readiness_router)
 
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
