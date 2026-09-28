@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import router as auth_router
 from app.api.health_check import router as health_check_router
+from app.api.middleware import RateLimitMiddleware
 from app.api.monitor import router as monitor_router
 from app.core.config import settings
 from app.infrastructure.database import get_db
@@ -36,6 +37,7 @@ app.include_router(auth_router)
 app.include_router(monitor_router)
 app.include_router(health_check_router)
 
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
