@@ -18,6 +18,7 @@ from app.api.metrics_middleware import MetricsMiddleware
 from app.api.middleware import RateLimitMiddleware
 from app.api.monitor import router as monitor_router
 from app.api.readiness import router as readiness_router
+from app.api.security import SecurityHeadersMiddleware
 from app.core.config import settings
 from app.infrastructure.database import get_db
 from app.infrastructure.health import check_database
@@ -48,6 +49,7 @@ app.include_router(dashboard_router)
 app.include_router(metrics_router)
 app.include_router(readiness_router)
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(

@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 import httpx
 
+from app.infrastructure.ssrf import SSRFProtection
+
 
 @dataclass
 class CheckResultData:
@@ -15,6 +17,15 @@ class HealthCheckClient:
     async def check(
         self, url: str, method: str, timeout_seconds: int
     ) -> CheckResultData:
+        is_safe, reason = SSRFProtection.is_safe_url(url)
+        if not is_safe:
+            return CheckResultData(
+                status="error",
+                http_status=None,
+                response_time_ms=None,
+                error_message=f"SSRF protection: {reason}",
+            )
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.request(
