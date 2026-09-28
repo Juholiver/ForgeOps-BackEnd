@@ -4,6 +4,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.audit_service import AuditService
 from app.domain.check_schemas import CheckResultResponse
 from app.domain.incident_schemas import (
     IncidentListResponse,
@@ -20,6 +21,7 @@ class IncidentService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.incident_repo = IncidentRepository(session)
+        self.audit = AuditService(session)
 
     async def process_check_result(
         self, monitor_id: UUID, check: CheckResultResponse
@@ -45,6 +47,12 @@ class IncidentService:
             reason=reason,
         )
         await self.incident_repo.create(incident)
+        await self.audit.log(
+            action="incident.create",
+            resource="incident",
+            resource_id=str(incident.id),
+            metadata={"monitor_id": str(monitor_id), "reason": reason},
+        )
         logger.warning(
             "incident_created",
             monitor_id=str(monitor_id),
@@ -56,6 +64,12 @@ class IncidentService:
         incident.status = IncidentStatus.RESOLVED
         incident.resolved_at = datetime.now(UTC)
         await self.incident_repo.update(incident)
+        await self.audit.log(
+            action="incident.resolve",
+            resource="incident",
+            resource_id=str(incident.id),
+            metadata={"monitor_id": str(incident.monitor_id)},
+        )
         logger.info(
             "incident_resolved",
             incident_id=str(incident.id),
@@ -98,4 +112,10 @@ class IncidentService:
 
         incident.status = data.status
         await self.incident_repo.update(incident)
+        await self.audit.log(
+            action="incident.update",
+            resource="incident",
+            resource_id=str(incident.id),
+            metadata={"status": data.status.value},
+        )
         return IncidentResponse.model_validate(incident)

@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.audit_service import AuditService
 from app.domain.models import Monitor
 from app.domain.monitor_schemas import (
     MonitorCreate,
@@ -16,6 +17,7 @@ class MonitorService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.monitor_repo = MonitorRepository(session)
+        self.audit = AuditService(session)
 
     async def create_monitor(self, data: MonitorCreate) -> MonitorResponse:
         monitor = Monitor(
@@ -27,6 +29,12 @@ class MonitorService:
             expected_status=data.expected_status,
         )
         await self.monitor_repo.create(monitor)
+        await self.audit.log(
+            action="monitor.create",
+            resource="monitor",
+            resource_id=str(monitor.id),
+            metadata={"name": monitor.name, "url": monitor.url},
+        )
         return MonitorResponse.model_validate(monitor)
 
     async def list_monitors(
@@ -61,6 +69,12 @@ class MonitorService:
             setattr(monitor, field, value)
 
         await self.monitor_repo.update(monitor)
+        await self.audit.log(
+            action="monitor.update",
+            resource="monitor",
+            resource_id=str(monitor.id),
+            metadata={"updated_fields": list(update_data.keys())},
+        )
         return MonitorResponse.model_validate(monitor)
 
     async def toggle_monitor(self, monitor_id: UUID) -> MonitorResponse:
@@ -70,6 +84,12 @@ class MonitorService:
 
         monitor.active = not monitor.active
         await self.monitor_repo.update(monitor)
+        await self.audit.log(
+            action="monitor.toggle",
+            resource="monitor",
+            resource_id=str(monitor.id),
+            metadata={"active": monitor.active},
+        )
         return MonitorResponse.model_validate(monitor)
 
     async def delete_monitor(self, monitor_id: UUID) -> None:
@@ -77,3 +97,9 @@ class MonitorService:
         if not monitor:
             raise ValueError("Monitor not found")
         await self.monitor_repo.delete(monitor)
+        await self.audit.log(
+            action="monitor.delete",
+            resource="monitor",
+            resource_id=str(monitor.id),
+            metadata={"name": monitor.name},
+        )

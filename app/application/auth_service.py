@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.audit_service import AuditService
 from app.domain.models import User, UserRole
 from app.domain.schemas import TokenResponse, UserCreate, UserResponse
 from app.infrastructure.repositories import UserRepository
@@ -18,6 +19,7 @@ class AuthService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.user_repo = UserRepository(session)
+        self.audit = AuditService(session)
 
     async def register(self, data: UserCreate) -> UserResponse:
         existing = await self.user_repo.get_by_email(data.email)
@@ -31,6 +33,12 @@ class AuthService:
             role=UserRole.VIEWER,
         )
         await self.user_repo.create(user)
+        await self.audit.log(
+            action="user.register",
+            resource="user",
+            resource_id=str(user.id),
+            metadata={"email": data.email},
+        )
         return UserResponse.model_validate(user)
 
     async def login(self, email: str, password: str) -> TokenResponse:
@@ -41,6 +49,12 @@ class AuthService:
         if not user.is_active:
             raise ValueError("User is inactive")
 
+        await self.audit.log(
+            action="user.login",
+            resource="user",
+            user_id=user.id,
+            resource_id=str(user.id),
+        )
         return TokenResponse(
             access_token=create_access_token(user.id, user.role.value),
             refresh_token=create_refresh_token(user.id),
