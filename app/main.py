@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import router as auth_router
+from app.api.monitor import router as monitor_router
 from app.core.config import settings
 from app.infrastructure.database import get_db
 from app.infrastructure.health import check_database
@@ -31,6 +32,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(monitor_router)
 
 app.add_middleware(
     CORSMiddleware,
