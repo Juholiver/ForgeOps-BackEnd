@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from uuid import UUID
 
@@ -159,45 +160,51 @@ class DashboardRepository:
     async def get_dashboard_summary(
         self, since: datetime
     ) -> tuple[int, int, int, int, int, float, float]:
-        monitors_total = await self.session.execute(
-            select(func.count(Monitor.id))
-        )
-        monitors_active = await self.session.execute(
-            select(func.count(Monitor.id)).where(Monitor.active.is_(True))
-        )
-        checks_total = await self.session.execute(
-            select(func.count(CheckResult.id)).where(
-                CheckResult.checked_at >= since
-            )
-        )
-        incidents_total = await self.session.execute(
-            select(func.count(Incident.id))
-        )
-        incidents_open = await self.session.execute(
-            select(func.count(Incident.id)).where(
-                Incident.status == IncidentStatus.OPEN
-            )
-        )
-        avg_uptime = await self.session.execute(
-            select(
-                func.avg(
-                    case((CheckResult.status == "up", 1.0), else_=0.0)
+        results = await asyncio.gather(
+            self.session.execute(select(func.count(Monitor.id))),
+            self.session.execute(
+                select(func.count(Monitor.id)).where(Monitor.active.is_(True))
+            ),
+            self.session.execute(
+                select(func.count(CheckResult.id)).where(
+                    CheckResult.checked_at >= since
                 )
-            ).where(CheckResult.checked_at >= since)
-        )
-        avg_latency = await self.session.execute(
-            select(func.avg(CheckResult.response_time_ms)).where(
-                CheckResult.checked_at >= since,
-                CheckResult.response_time_ms.is_not(None),
-            )
+            ),
+            self.session.execute(select(func.count(Incident.id))),
+            self.session.execute(
+                select(func.count(Incident.id)).where(
+                    Incident.status == IncidentStatus.OPEN
+                )
+            ),
+            self.session.execute(
+                select(
+                    func.avg(
+                        case((CheckResult.status == "up", 1.0), else_=0.0)
+                    )
+                ).where(CheckResult.checked_at >= since)
+            ),
+            self.session.execute(
+                select(func.avg(CheckResult.response_time_ms)).where(
+                    CheckResult.checked_at >= since,
+                    CheckResult.response_time_ms.is_not(None),
+                )
+            ),
         )
 
+        monitors_total = results[0].scalar() or 0
+        monitors_active = results[1].scalar() or 0
+        checks_total = results[2].scalar() or 0
+        incidents_total = results[3].scalar() or 0
+        incidents_open = results[4].scalar() or 0
+        avg_uptime = (results[5].scalar() or 0.0) * 100
+        avg_latency = results[6].scalar() or 0.0
+
         return (
-            monitors_total.scalar() or 0,
-            monitors_active.scalar() or 0,
-            checks_total.scalar() or 0,
-            incidents_total.scalar() or 0,
-            incidents_open.scalar() or 0,
-            (avg_uptime.scalar() or 0.0) * 100,
-            avg_latency.scalar() or 0.0,
+            monitors_total,
+            monitors_active,
+            checks_total,
+            incidents_total,
+            incidents_open,
+            avg_uptime,
+            avg_latency,
         )
