@@ -3,6 +3,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.incident_service import IncidentService
 from app.domain.check_schemas import CheckResultResponse
 from app.domain.models import CheckResult
 from app.infrastructure.cache import DistributedLock, HealthCheckCache
@@ -19,6 +20,7 @@ class HealthCheckService:
         self.check_client = HealthCheckClient()
         self.cache = HealthCheckCache(ttl=60)
         self.lock = DistributedLock(lock_timeout=60)
+        self.incident_service = IncidentService(session)
 
     async def execute_check(self, monitor_id: UUID) -> CheckResultResponse:
         cached = await self.cache.get(str(monitor_id))
@@ -61,6 +63,9 @@ class HealthCheckService:
 
             response = CheckResultResponse.model_validate(check_result)
             await self.cache.set(str(monitor_id), response.model_dump(mode="json"))
+
+            await self.incident_service.process_check_result(monitor.id, response)
+
             return response
         finally:
             await self.lock.release(f"health_check:{monitor_id}")
@@ -93,6 +98,9 @@ class HealthCheckService:
             self.session.add(check_result)
             await self.session.flush()
             await self.session.refresh(check_result)
-            results.append(CheckResultResponse.model_validate(check_result))
+            response = CheckResultResponse.model_validate(check_result)
+            results.append(response)
+
+            await self.incident_service.process_check_result(monitor.id, response)
 
         return results
