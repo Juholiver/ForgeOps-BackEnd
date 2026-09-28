@@ -3,11 +3,14 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.infrastructure.database import get_db
+from app.infrastructure.health import check_database
 
 logger = structlog.get_logger()
 
@@ -50,6 +53,11 @@ async def add_request_id(
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "forgeops", "version": "0.1.0"}
+
+
+@app.get("/health/db", tags=["health"])
+async def health_check_db(session: AsyncSession = Depends(get_db)) -> dict[str, str]:  # noqa: B008
+    return await check_database(session)
 
 
 @app.exception_handler(Exception)
