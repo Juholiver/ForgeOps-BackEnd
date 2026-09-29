@@ -20,7 +20,7 @@ from app.api.monitor import router as monitor_router
 from app.api.readiness import router as readiness_router
 from app.api.security import SecurityHeadersMiddleware
 from app.core.config import settings
-from app.infrastructure.database import get_db
+from app.infrastructure.database import get_db, init_schema
 from app.infrastructure.health import check_database
 
 logger = structlog.get_logger()
@@ -29,6 +29,9 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("forgeops starting", env=settings.APP_ENV)
+    if settings.uses_sqlite:
+        await init_schema()
+        logger.info("sqlite schema ready", path=settings.SQLITE_PATH)
     yield
     logger.info("forgeops shutting down")
 

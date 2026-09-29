@@ -2,12 +2,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env"), env_file_encoding="utf-8"
+    )
 
     APP_ENV: str = "development"
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     APP_SECRET_KEY: str = "change-me-in-production"
+
+    DB_BACKEND: str = "postgres"  # "postgres" | "sqlite"
+    SQLITE_PATH: str = "forgeops_dev.db"
 
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
@@ -30,7 +35,13 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     @property
+    def uses_sqlite(self) -> bool:
+        return self.DB_BACKEND.lower() == "sqlite"
+
+    @property
     def database_url(self) -> str:
+        if self.uses_sqlite:
+            return f"sqlite+aiosqlite:///{self.SQLITE_PATH}"
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -38,6 +49,8 @@ class Settings(BaseSettings):
 
     @property
     def sync_database_url(self) -> str:
+        if self.uses_sqlite:
+            return f"sqlite:///{self.SQLITE_PATH}"
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
