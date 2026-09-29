@@ -5,6 +5,7 @@ Revises: 0001_initial_schema
 Create Date: 2026-09-28 17:30:00.000000
 
 """
+
 from collections.abc import Sequence
 
 from alembic import op
@@ -35,9 +36,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_monitors_active", table_name="monitors")
-    op.drop_index(
-        "ix_check_results_monitor_id_checked_at", table_name="check_results"
-    )
+    op.drop_index("ix_check_results_monitor_id_checked_at", table_name="check_results")
     op.drop_index("ix_incidents_monitor_id_status", table_name="incidents")
     op.drop_index("ix_audit_logs_user_id", table_name="audit_logs")
     op.drop_index("ix_audit_logs_action", table_name="audit_logs")

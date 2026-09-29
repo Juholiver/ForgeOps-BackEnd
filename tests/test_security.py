@@ -34,17 +34,13 @@ def test_ssrf_blocks_172_16_x():
 
 
 def test_ssrf_blocks_metadata():
-    safe, reason = SSRFProtection.is_safe_url(
-        "http://169.254.169.254/latest/meta-data"
-    )
+    safe, reason = SSRFProtection.is_safe_url("http://169.254.169.254/latest/meta-data")
     assert safe is False
     assert "Link-local" in reason
 
 
 def test_ssrf_blocks_metadata_google():
-    safe, reason = SSRFProtection.is_safe_url(
-        "http://metadata.google.internal/computeMetadata/v1/"
-    )
+    safe, reason = SSRFProtection.is_safe_url("http://metadata.google.internal/computeMetadata/v1/")
     assert safe is False
     assert "metadata" in reason
 

@@ -40,9 +40,7 @@ async def get_incident(
     try:
         return await service.get_incident(incident_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.patch("/{incident_id}", response_model=IncidentResponse)
@@ -54,6 +52,4 @@ async def update_incident(
     try:
         return await service.update_incident(incident_id, data)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

@@ -17,9 +17,7 @@ class UserRole(enum.StrEnum):
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -33,13 +31,9 @@ class User(Base, TimestampMixin):
 
 class Monitor(Base, TimestampMixin):
     __tablename__ = "monitors"
-    __table_args__ = (
-        Index("ix_monitors_active", "active"),
-    )
+    __table_args__ = (Index("ix_monitors_active", "active"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     url: Mapped[str] = mapped_column(Text, nullable=False)
     method: Mapped[str] = mapped_column(String(10), default="GET", nullable=False)
@@ -51,13 +45,9 @@ class Monitor(Base, TimestampMixin):
 
 class CheckResult(Base):
     __tablename__ = "check_results"
-    __table_args__ = (
-        Index("ix_check_results_monitor_id_checked_at", "monitor_id", "checked_at"),
-    )
+    __table_args__ = (Index("ix_check_results_monitor_id_checked_at", "monitor_id", "checked_at"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     monitor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("monitors.id", ondelete="CASCADE"),
@@ -81,13 +71,9 @@ class IncidentStatus(enum.StrEnum):
 
 class Incident(Base):
     __tablename__ = "incidents"
-    __table_args__ = (
-        Index("ix_incidents_monitor_id_status", "monitor_id", "status"),
-    )
+    __table_args__ = (Index("ix_incidents_monitor_id_status", "monitor_id", "status"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     monitor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("monitors.id", ondelete="CASCADE"),
@@ -115,9 +101,7 @@ class AuditLog(Base):
         Index("ix_audit_logs_created_at", "created_at"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

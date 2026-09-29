@@ -46,8 +46,7 @@ class HealthCheckService:
             if status == "up" and result_data.http_status != monitor.expected_status:
                 status = "error"
                 result_data.error_message = (
-                    f"Expected status {monitor.expected_status}, "
-                    f"got {result_data.http_status}"
+                    f"Expected status {monitor.expected_status}, got {result_data.http_status}"
                 )
 
             check_result = CheckResult(
@@ -84,8 +83,7 @@ class HealthCheckService:
             if status == "up" and result_data.http_status != monitor.expected_status:
                 status = "error"
                 result_data.error_message = (
-                    f"Expected status {monitor.expected_status}, "
-                    f"got {result_data.http_status}"
+                    f"Expected status {monitor.expected_status}, got {result_data.http_status}"
                 )
 
             check_result = CheckResult(

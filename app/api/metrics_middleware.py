@@ -24,11 +24,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         method = request.method
         status = str(response.status_code)
 
-        http_requests_total.labels(
-            method=method, endpoint=endpoint, status=status
-        ).inc()
-        http_request_duration_seconds.labels(
-            method=method, endpoint=endpoint
-        ).observe(duration)
+        http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
+        http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
 
         return response

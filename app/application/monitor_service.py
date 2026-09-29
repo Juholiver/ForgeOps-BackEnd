@@ -54,9 +54,7 @@ class MonitorService:
             raise ValueError("Monitor not found")
         return MonitorResponse.model_validate(monitor)
 
-    async def update_monitor(
-        self, monitor_id: UUID, data: MonitorUpdate
-    ) -> MonitorResponse:
+    async def update_monitor(self, monitor_id: UUID, data: MonitorUpdate) -> MonitorResponse:
         monitor = await self.monitor_repo.get_by_id(monitor_id)
         if not monitor:
             raise ValueError("Monitor not found")

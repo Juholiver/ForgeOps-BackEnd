@@ -47,9 +47,7 @@ async def get_monitor(
     try:
         return await service.get_monitor(monitor_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.patch("/{monitor_id}", response_model=MonitorResponse)
@@ -61,9 +59,7 @@ async def update_monitor(
     try:
         return await service.update_monitor(monitor_id, data)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.post("/{monitor_id}/toggle", response_model=MonitorResponse)
@@ -74,9 +70,7 @@ async def toggle_monitor(
     try:
         return await service.toggle_monitor(monitor_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.delete("/{monitor_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -87,6 +81,4 @@ async def delete_monitor(
     try:
         await service.delete_monitor(monitor_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

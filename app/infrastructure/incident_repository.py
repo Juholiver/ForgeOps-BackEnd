@@ -11,9 +11,7 @@ class IncidentRepository:
         self.session = session
 
     async def get_by_id(self, incident_id: UUID) -> Incident | None:
-        result = await self.session.execute(
-            select(Incident).where(Incident.id == incident_id)
-        )
+        result = await self.session.execute(select(Incident).where(Incident.id == incident_id))
         return result.scalar_one_or_none()
 
     async def list(

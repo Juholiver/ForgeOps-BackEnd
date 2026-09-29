@@ -11,15 +11,11 @@ class DashboardRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_uptime(
-        self, monitor_id: UUID, since: datetime
-    ) -> tuple[int, int]:
+    async def get_uptime(self, monitor_id: UUID, since: datetime) -> tuple[int, int]:
         result = await self.session.execute(
             select(
                 func.count(CheckResult.id),
-                func.sum(
-                    case((CheckResult.status == "up", 1), else_=0)
-                ),
+                func.sum(case((CheckResult.status == "up", 1), else_=0)),
             ).where(
                 CheckResult.monitor_id == monitor_id,
                 CheckResult.checked_at >= since,
@@ -80,9 +76,7 @@ class DashboardRepository:
         result = await self.session.execute(
             select(
                 func.count(Incident.id),
-                func.sum(
-                    case((Incident.status == IncidentStatus.OPEN, 1), else_=0)
-                ),
+                func.sum(case((Incident.status == IncidentStatus.OPEN, 1), else_=0)),
                 func.sum(
                     case(
                         (
@@ -111,15 +105,11 @@ class DashboardRepository:
             row[3] or 0,
         )
 
-    async def get_availability(
-        self, monitor_id: UUID, since: datetime
-    ) -> tuple[int, int]:
+    async def get_availability(self, monitor_id: UUID, since: datetime) -> tuple[int, int]:
         result = await self.session.execute(
             select(
                 func.count(CheckResult.id),
-                func.sum(
-                    case((CheckResult.status != "up", 1), else_=0)
-                ),
+                func.sum(case((CheckResult.status != "up", 1), else_=0)),
             ).where(
                 CheckResult.monitor_id == monitor_id,
                 CheckResult.checked_at >= since,
@@ -138,9 +128,7 @@ class DashboardRepository:
         since: datetime | None = None,
     ) -> tuple[list[CheckResult], int]:
         query = select(CheckResult).where(CheckResult.monitor_id == monitor_id)
-        count_query = select(func.count(CheckResult.id)).where(
-            CheckResult.monitor_id == monitor_id
-        )
+        count_query = select(func.count(CheckResult.id)).where(CheckResult.monitor_id == monitor_id)
 
         if since:
             query = query.where(CheckResult.checked_at >= since)
@@ -159,9 +147,7 @@ class DashboardRepository:
     async def get_dashboard_summary(
         self, since: datetime
     ) -> tuple[int, int, int, int, int, float, float]:
-        monitors_total = (
-            await self.session.execute(select(func.count(Monitor.id)))
-        ).scalar() or 0
+        monitors_total = (await self.session.execute(select(func.count(Monitor.id)))).scalar() or 0
         monitors_active = (
             await self.session.execute(
                 select(func.count(Monitor.id)).where(Monitor.active.is_(True))
@@ -169,9 +155,7 @@ class DashboardRepository:
         ).scalar() or 0
         checks_total = (
             await self.session.execute(
-                select(func.count(CheckResult.id)).where(
-                    CheckResult.checked_at >= since
-                )
+                select(func.count(CheckResult.id)).where(CheckResult.checked_at >= since)
             )
         ).scalar() or 0
         incidents_total = (
@@ -179,18 +163,14 @@ class DashboardRepository:
         ).scalar() or 0
         incidents_open = (
             await self.session.execute(
-                select(func.count(Incident.id)).where(
-                    Incident.status == IncidentStatus.OPEN
-                )
+                select(func.count(Incident.id)).where(Incident.status == IncidentStatus.OPEN)
             )
         ).scalar() or 0
         avg_uptime_row = (
             await self.session.execute(
-                select(
-                    func.avg(
-                        case((CheckResult.status == "up", 1.0), else_=0.0)
-                    )
-                ).where(CheckResult.checked_at >= since)
+                select(func.avg(case((CheckResult.status == "up", 1.0), else_=0.0))).where(
+                    CheckResult.checked_at >= since
+                )
             )
         ).scalar()
         avg_uptime = (avg_uptime_row or 0.0) * 100

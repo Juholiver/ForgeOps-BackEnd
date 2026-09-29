@@ -32,23 +32,17 @@ def test_metrics_endpoint(client: TestClient):
 
 
 def test_http_requests_metric_exists():
-    metric = http_requests_total.labels(
-        method="GET", endpoint="/health", status="200"
-    )
+    metric = http_requests_total.labels(method="GET", endpoint="/health", status="200")
     assert metric is not None
 
 
 def test_http_request_duration_metric_exists():
-    metric = http_request_duration_seconds.labels(
-        method="GET", endpoint="/health"
-    )
+    metric = http_request_duration_seconds.labels(method="GET", endpoint="/health")
     assert metric is not None
 
 
 def test_celery_tasks_metric_exists():
-    metric = celery_tasks_total.labels(
-        task_name="run_health_check", status="up"
-    )
+    metric = celery_tasks_total.labels(task_name="run_health_check", status="up")
     assert metric is not None
 
 

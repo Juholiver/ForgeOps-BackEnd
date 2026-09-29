@@ -19,9 +19,7 @@ class DashboardService:
         self.session = session
         self.dashboard_repo = DashboardRepository(session)
 
-    async def get_uptime(
-        self, monitor_id: UUID, days: int = 7
-    ) -> UptimeResponse:
+    async def get_uptime(self, monitor_id: UUID, days: int = 7) -> UptimeResponse:
         since = datetime.now(UTC) - timedelta(days=days)
         total, success = await self.dashboard_repo.get_uptime(monitor_id, since)
         uptime_pct = (success / total * 100) if total > 0 else 100.0
@@ -34,12 +32,10 @@ class DashboardService:
             period_end=datetime.now(UTC),
         )
 
-    async def get_latency(
-        self, monitor_id: UUID, days: int = 7
-    ) -> LatencyResponse:
+    async def get_latency(self, monitor_id: UUID, days: int = 7) -> LatencyResponse:
         since = datetime.now(UTC) - timedelta(days=days)
-        avg, p95, p99, min_lat, max_lat, total = (
-            await self.dashboard_repo.get_latency_stats(monitor_id, since)
+        avg, p95, p99, min_lat, max_lat, total = await self.dashboard_repo.get_latency_stats(
+            monitor_id, since
         )
         return LatencyResponse(
             monitor_id=monitor_id,
@@ -52,9 +48,12 @@ class DashboardService:
         )
 
     async def get_incident_summary(self) -> IncidentSummaryResponse:
-        total, open_count, investigating, resolved = (
-            await self.dashboard_repo.get_incident_summary()
-        )
+        (
+            total,
+            open_count,
+            investigating,
+            resolved,
+        ) = await self.dashboard_repo.get_incident_summary()
         return IncidentSummaryResponse(
             total=total,
             open=open_count,
@@ -62,16 +61,10 @@ class DashboardService:
             resolved=resolved,
         )
 
-    async def get_availability(
-        self, monitor_id: UUID, days: int = 7
-    ) -> AvailabilityResponse:
+    async def get_availability(self, monitor_id: UUID, days: int = 7) -> AvailabilityResponse:
         since = datetime.now(UTC) - timedelta(days=days)
-        total, failed = await self.dashboard_repo.get_availability(
-            monitor_id, since
-        )
-        availability_pct = (
-            ((total - failed) / total * 100) if total > 0 else 100.0
-        )
+        total, failed = await self.dashboard_repo.get_availability(monitor_id, since)
+        availability_pct = ((total - failed) / total * 100) if total > 0 else 100.0
         return AvailabilityResponse(
             monitor_id=monitor_id,
             availability_percentage=round(availability_pct, 2),

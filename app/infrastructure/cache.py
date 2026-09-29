@@ -28,9 +28,7 @@ class DistributedLock:
         return f"lock:{resource}"
 
     async def acquire(self, resource: str) -> bool:
-        return await redis_client.acquire_lock(
-            self._key(resource), self.lock_timeout
-        )
+        return await redis_client.acquire_lock(self._key(resource), self.lock_timeout)
 
     async def release(self, resource: str) -> bool:
         return await redis_client.release_lock(self._key(resource))

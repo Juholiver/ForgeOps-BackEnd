@@ -16,9 +16,7 @@ class MonitorCreate(BaseModel):
 class MonitorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     url: HttpUrl | None = None
-    method: str | None = Field(
-        default=None, pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$"
-    )
+    method: str | None = Field(default=None, pattern="^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$")
     interval_seconds: int | None = Field(default=None, ge=10, le=3600)
     timeout_seconds: int | None = Field(default=None, ge=1, le=120)
     expected_status: int | None = Field(default=None, ge=100, le=599)

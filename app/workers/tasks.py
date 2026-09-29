@@ -35,9 +35,7 @@ def run_health_check(self: Task, monitor_id: str) -> dict[str, object]:
     result = asyncio.run(_run_health_check_async(self, monitor_id))
     duration = time.time() - start
 
-    celery_task_duration_seconds.labels(
-        task_name="run_health_check"
-    ).observe(duration)
+    celery_task_duration_seconds.labels(task_name="run_health_check").observe(duration)
     celery_tasks_total.labels(
         task_name="run_health_check",
         status=result.get("status", "unknown"),
@@ -49,9 +47,7 @@ def run_health_check(self: Task, monitor_id: str) -> dict[str, object]:
 async def _run_health_check_async(task: Task, monitor_id: str) -> dict[str, object]:
     session_maker = task.session_maker
     async with session_maker() as session:
-        result = await session.execute(
-            select(Monitor).where(Monitor.id == monitor_id)
-        )
+        result = await session.execute(select(Monitor).where(Monitor.id == monitor_id))
         monitor = result.scalar_one_or_none()
 
         if not monitor:
@@ -69,8 +65,7 @@ async def _run_health_check_async(task: Task, monitor_id: str) -> dict[str, obje
         if status == "up" and check_result.http_status != monitor.expected_status:
             status = "error"
             check_result.error_message = (
-                f"Expected status {monitor.expected_status}, "
-                f"got {check_result.http_status}"
+                f"Expected status {monitor.expected_status}, got {check_result.http_status}"
             )
 
         db_result = CheckResult(
@@ -108,12 +103,8 @@ def run_all_health_checks(self: Task) -> dict[str, object]:
     result = asyncio.run(_run_all_health_checks_async(self))
     duration = time.time() - start
 
-    celery_task_duration_seconds.labels(
-        task_name="run_all_health_checks"
-    ).observe(duration)
-    celery_tasks_total.labels(
-        task_name="run_all_health_checks", status="success"
-    ).inc()
+    celery_task_duration_seconds.labels(task_name="run_all_health_checks").observe(duration)
+    celery_tasks_total.labels(task_name="run_all_health_checks", status="success").inc()
 
     return result
 
@@ -121,9 +112,7 @@ def run_all_health_checks(self: Task) -> dict[str, object]:
 async def _run_all_health_checks_async(task: Task) -> dict[str, object]:
     session_maker = task.session_maker
     async with session_maker() as session:
-        result = await session.execute(
-            select(Monitor).where(Monitor.active.is_(True))
-        )
+        result = await session.execute(select(Monitor).where(Monitor.active.is_(True)))
         monitors = list(result.scalars().all())
 
         logger.info("running_all_health_checks", count=len(monitors))

@@ -37,9 +37,7 @@ class IncidentService:
 
         return None
 
-    async def _create_incident(
-        self, monitor_id: UUID, check: CheckResultResponse
-    ) -> Incident:
+    async def _create_incident(self, monitor_id: UUID, check: CheckResultResponse) -> Incident:
         reason = check.error_message or f"HTTP status {check.http_status}"
         incident = Incident(
             monitor_id=monitor_id,
@@ -84,9 +82,7 @@ class IncidentService:
         status: IncidentStatus | None = None,
         monitor_id: UUID | None = None,
     ) -> IncidentListResponse:
-        incidents, total = await self.incident_repo.list(
-            page, page_size, status, monitor_id
-        )
+        incidents, total = await self.incident_repo.list(page, page_size, status, monitor_id)
         return IncidentListResponse(
             items=[IncidentResponse.model_validate(i) for i in incidents],
             total=total,
@@ -100,9 +96,7 @@ class IncidentService:
             raise ValueError("Incident not found")
         return IncidentResponse.model_validate(incident)
 
-    async def update_incident(
-        self, incident_id: UUID, data: IncidentUpdate
-    ) -> IncidentResponse:
+    async def update_incident(self, incident_id: UUID, data: IncidentUpdate) -> IncidentResponse:
         incident = await self.incident_repo.get_by_id(incident_id)
         if not incident:
             raise ValueError("Incident not found")

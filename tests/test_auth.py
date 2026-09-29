@@ -83,9 +83,7 @@ def test_get_current_user(client: TestClient, test_user: User):
     )
     token = login_response.json()["access_token"]
 
-    response = client.get(
-        "/auth/me", headers={"Authorization": f"Bearer {token}"}
-    )
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == "test@example.com"
@@ -97,9 +95,7 @@ def test_get_current_user_no_token(client: TestClient):
 
 
 def test_get_current_user_invalid_token(client: TestClient):
-    response = client.get(
-        "/auth/me", headers={"Authorization": "Bearer invalidtoken"}
-    )
+    response = client.get("/auth/me", headers={"Authorization": "Bearer invalidtoken"})
     assert response.status_code == 401
 
 

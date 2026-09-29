@@ -39,9 +39,7 @@ class AuditService:
         action: str | None = None,
         resource: str | None = None,
     ) -> AuditLogListResponse:
-        logs, total = await self.audit_repo.list(
-            page, page_size, user_id, action, resource
-        )
+        logs, total = await self.audit_repo.list(page, page_size, user_id, action, resource)
         return AuditLogListResponse(
             items=[AuditLogResponse.model_validate(log) for log in logs],
             total=total,

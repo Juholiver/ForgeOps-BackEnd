@@ -14,9 +14,7 @@ class CheckResultData:
 
 
 class HealthCheckClient:
-    async def check(
-        self, url: str, method: str, timeout_seconds: int
-    ) -> CheckResultData:
+    async def check(self, url: str, method: str, timeout_seconds: int) -> CheckResultData:
         is_safe, reason = SSRFProtection.is_safe_url(url)
         if not is_safe:
             return CheckResultData(
