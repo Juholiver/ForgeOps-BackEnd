@@ -1,11 +1,10 @@
 # ForgeOps backend stack.
 # The `frontend` service lives in the forgeops-frontend repository; both stacks
-# join the fixed external network `forgeops` (created here on first `up`).
+# join the shared external network `forgeops` (one-time setup:
+#   docker network inspect forgeops >/dev/null 2>&1 || docker network create forgeops).
 #
 # Local dev:    docker compose up -d --build
 # Production:   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
-
-name: forgeops
 
 services:
   postgres:
