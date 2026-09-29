@@ -1,0 +1,47 @@
+# Production overlay — usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+# Requires Docker Compose v2.24.4+ (!override tag)
+#
+# TLS termination (Caddy) and the frontend stack are deployed by the
+# forgeops-frontend repository on the same `forgeops` Docker network.
+
+services:
+  postgres:
+    ports: !override []
+    restart: unless-stopped
+
+  redis:
+    ports: !override []
+    restart: unless-stopped
+
+  rabbitmq:
+    ports: !override []
+    restart: unless-stopped
+
+  backend:
+    ports: !override []
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DB_BACKEND: postgres
+      RUN_MIGRATIONS: "1"
+
+  worker:
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DB_BACKEND: postgres
+
+  scheduler:
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DB_BACKEND: postgres
+
+  prometheus:
+    ports: !override []
+    restart: unless-stopped
+
+  grafana:
+    ports: !override []
+    restart: unless-stopped

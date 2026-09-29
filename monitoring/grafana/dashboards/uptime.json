@@ -1,0 +1,94 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "ForgeOps - Uptime & Availability",
+    "tags": ["forgeops", "uptime"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {"from": "now-24h", "to": "now"},
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Monitors",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "forgeops_active_monitors",
+            "legendFormat": "Active Monitors"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Open Incidents",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "forgeops_open_incidents",
+            "legendFormat": "Open Incidents"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "HTTP Requests Total",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(forgeops_http_requests_total[5m]))",
+            "legendFormat": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "HTTP Request Duration (p95)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(forgeops_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "HTTP Requests by Status",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(forgeops_http_requests_total[5m])) by (status)",
+            "legendFormat": "{{status}}"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "HTTP Request Duration",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(forgeops_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(forgeops_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(forgeops_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p99"
+          }
+        ]
+      }
+    ]
+  }
+}

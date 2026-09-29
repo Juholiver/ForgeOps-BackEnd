@@ -1,0 +1,62 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "ForgeOps - Workers & Queues",
+    "tags": ["forgeops", "workers"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {"from": "now-24h", "to": "now"},
+    "panels": [
+      {
+        "id": 1,
+        "title": "Celery Tasks Total",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(forgeops_celery_tasks_total[5m])) by (task_name)",
+            "legendFormat": "{{task_name}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Celery Task Duration",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(forgeops_celery_task_duration_seconds_bucket[5m])) by (le, task_name))",
+            "legendFormat": "{{task_name}} p95"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Tasks by Status",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(forgeops_celery_tasks_total) by (status)",
+            "legendFormat": "{{status}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "DB Connection Pool",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "forgeops_db_connection_pool",
+            "legendFormat": "{{state}}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,193 @@
+# ForgeOps backend stack.
+# The `frontend` service lives in the forgeops-frontend repository; both stacks
+# join the fixed external network `forgeops` (created here on first `up`).
+#
+# Local dev:    docker compose up -d --build
+# Production:   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+
+name: forgeops
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-forgeops}
+      POSTGRES_USER: ${POSTGRES_USER:-forgeops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgeops}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forgeops}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - forgeops
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - forgeops
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-forgeops}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-forgeops}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - forgeops
+
+  backend:
+    image: ${BACKEND_IMAGE:-forgeops-backend:local}
+    build: .
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-change-me-in-production}
+      DB_BACKEND: ${DB_BACKEND:-postgres}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-1}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-forgeops}
+      POSTGRES_USER: ${POSTGRES_USER:-forgeops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgeops}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-forgeops}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-forgeops}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000", "http://localhost"]}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forgeops
+
+  worker:
+    image: ${BACKEND_IMAGE:-forgeops-backend:local}
+    build: .
+    command: python -m app.workers.worker
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-change-me-in-production}
+      DB_BACKEND: ${DB_BACKEND:-postgres}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-forgeops}
+      POSTGRES_USER: ${POSTGRES_USER:-forgeops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgeops}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-forgeops}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-forgeops}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forgeops
+
+  scheduler:
+    image: ${BACKEND_IMAGE:-forgeops-backend:local}
+    build: .
+    command: python -m app.workers.scheduler
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-change-me-in-production}
+      DB_BACKEND: ${DB_BACKEND:-postgres}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-forgeops}
+      POSTGRES_USER: ${POSTGRES_USER:-forgeops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgeops}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-forgeops}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-forgeops}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forgeops
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - backend
+    networks:
+      - forgeops
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - forgeops
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  grafana_data:
+
+networks:
+  forgeops:
+    name: forgeops
+    driver: bridge

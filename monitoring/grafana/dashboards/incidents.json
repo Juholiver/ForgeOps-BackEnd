@@ -1,0 +1,62 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "ForgeOps - Incidents",
+    "tags": ["forgeops", "incidents"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {"from": "now-7d", "to": "now"},
+    "panels": [
+      {
+        "id": 1,
+        "title": "Open Incidents",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "forgeops_open_incidents",
+            "legendFormat": "Open"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Total Incidents",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(forgeops_celery_tasks_total{task_name=\"run_health_check\"})",
+            "legendFormat": "Total"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Incidents Over Time",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "forgeops_open_incidents",
+            "legendFormat": "Open Incidents"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Health Check Results",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(forgeops_celery_tasks_total{task_name=\"run_health_check\"}[5m])) by (status)",
+            "legendFormat": "{{status}}"
+          }
+        ]
+      }
+    ]
+  }
+}
