@@ -189,5 +189,4 @@ volumes:
 
 networks:
   forgeops:
-    name: forgeops
-    driver: bridge
+    external: true
