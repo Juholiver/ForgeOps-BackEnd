@@ -22,7 +22,9 @@ class DatabaseTask(Task):  # type: ignore[misc]
     def session_maker(self) -> async_sessionmaker[AsyncSession]:
         if self._session_maker is None:
             engine = create_async_engine(settings.database_url)
-            self._session_maker = async_sessionmaker(engine, class_=AsyncSession)
+            self._session_maker = async_sessionmaker(
+                engine, class_=AsyncSession, expire_on_commit=False
+            )
         return self._session_maker
 
 
