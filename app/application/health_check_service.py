@@ -22,7 +22,11 @@ class HealthCheckService:
         self.lock = DistributedLock(lock_timeout=60)
         self.incident_service = IncidentService(session)
 
-    async def execute_check(self, monitor_id: UUID) -> CheckResultResponse:
+    async def execute_check(self, monitor_id: UUID, user_id: UUID) -> CheckResultResponse:
+        monitor = await self.monitor_repo.get_by_id(monitor_id)
+        if not monitor or monitor.user_id != user_id:
+            raise ValueError("Monitor not found")
+
         cached = await self.cache.get(str(monitor_id))
         if cached:
             return CheckResultResponse(**cached)
@@ -32,10 +36,6 @@ class HealthCheckService:
             raise ValueError("Check already in progress for this monitor")
 
         try:
-            monitor = await self.monitor_repo.get_by_id(monitor_id)
-            if not monitor:
-                raise ValueError("Monitor not found")
-
             result_data = await self.check_client.check(
                 url=monitor.url,
                 method=monitor.method,
@@ -69,8 +69,8 @@ class HealthCheckService:
         finally:
             await self.lock.release(f"health_check:{monitor_id}")
 
-    async def execute_all_active(self) -> list[CheckResultResponse]:
-        monitors, _ = await self.monitor_repo.list(active_only=True)
+    async def execute_all_active(self, *, user_id: UUID) -> list[CheckResultResponse]:
+        monitors, _ = await self.monitor_repo.list(active_only=True, user_id=user_id)
         results = []
         for monitor in monitors:
             result_data = await self.check_client.check(

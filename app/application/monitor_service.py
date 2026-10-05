@@ -19,8 +19,9 @@ class MonitorService:
         self.monitor_repo = MonitorRepository(session)
         self.audit = AuditService(session)
 
-    async def create_monitor(self, data: MonitorCreate) -> MonitorResponse:
+    async def create_monitor(self, data: MonitorCreate, user_id: UUID) -> MonitorResponse:
         monitor = Monitor(
+            user_id=user_id,
             name=data.name,
             url=str(data.url),
             method=data.method,
@@ -32,15 +33,21 @@ class MonitorService:
         await self.audit.log(
             action="monitor.create",
             resource="monitor",
+            user_id=user_id,
             resource_id=str(monitor.id),
             metadata={"name": monitor.name, "url": monitor.url},
         )
         return MonitorResponse.model_validate(monitor)
 
     async def list_monitors(
-        self, page: int = 1, page_size: int = 20, active_only: bool = False
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        active_only: bool = False,
+        *,
+        user_id: UUID,
     ) -> MonitorListResponse:
-        monitors, total = await self.monitor_repo.list(page, page_size, active_only)
+        monitors, total = await self.monitor_repo.list(page, page_size, active_only, user_id)
         return MonitorListResponse(
             items=[MonitorResponse.model_validate(m) for m in monitors],
             total=total,
@@ -48,16 +55,20 @@ class MonitorService:
             page_size=page_size,
         )
 
-    async def get_monitor(self, monitor_id: UUID) -> MonitorResponse:
+    async def _get_owned_monitor(self, monitor_id: UUID, user_id: UUID) -> Monitor:
         monitor = await self.monitor_repo.get_by_id(monitor_id)
-        if not monitor:
+        if not monitor or monitor.user_id != user_id:
             raise ValueError("Monitor not found")
+        return monitor
+
+    async def get_monitor(self, monitor_id: UUID, user_id: UUID) -> MonitorResponse:
+        monitor = await self._get_owned_monitor(monitor_id, user_id)
         return MonitorResponse.model_validate(monitor)
 
-    async def update_monitor(self, monitor_id: UUID, data: MonitorUpdate) -> MonitorResponse:
-        monitor = await self.monitor_repo.get_by_id(monitor_id)
-        if not monitor:
-            raise ValueError("Monitor not found")
+    async def update_monitor(
+        self, monitor_id: UUID, data: MonitorUpdate, user_id: UUID
+    ) -> MonitorResponse:
+        monitor = await self._get_owned_monitor(monitor_id, user_id)
 
         update_data = data.model_dump(exclude_unset=True)
         if "url" in update_data:
@@ -70,34 +81,33 @@ class MonitorService:
         await self.audit.log(
             action="monitor.update",
             resource="monitor",
+            user_id=user_id,
             resource_id=str(monitor.id),
             metadata={"updated_fields": list(update_data.keys())},
         )
         return MonitorResponse.model_validate(monitor)
 
-    async def toggle_monitor(self, monitor_id: UUID) -> MonitorResponse:
-        monitor = await self.monitor_repo.get_by_id(monitor_id)
-        if not monitor:
-            raise ValueError("Monitor not found")
+    async def toggle_monitor(self, monitor_id: UUID, user_id: UUID) -> MonitorResponse:
+        monitor = await self._get_owned_monitor(monitor_id, user_id)
 
         monitor.active = not monitor.active
         await self.monitor_repo.update(monitor)
         await self.audit.log(
             action="monitor.toggle",
             resource="monitor",
+            user_id=user_id,
             resource_id=str(monitor.id),
             metadata={"active": monitor.active},
         )
         return MonitorResponse.model_validate(monitor)
 
-    async def delete_monitor(self, monitor_id: UUID) -> None:
-        monitor = await self.monitor_repo.get_by_id(monitor_id)
-        if not monitor:
-            raise ValueError("Monitor not found")
+    async def delete_monitor(self, monitor_id: UUID, user_id: UUID) -> None:
+        monitor = await self._get_owned_monitor(monitor_id, user_id)
         await self.monitor_repo.delete(monitor)
         await self.audit.log(
             action="monitor.delete",
             resource="monitor",
+            user_id=user_id,
             resource_id=str(monitor.id),
             metadata={"name": monitor.name},
         )

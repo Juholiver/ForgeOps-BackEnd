@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from app.infrastructure.health_check_client import CheckResultData
 
 
-def create_monitor(client: TestClient, name: str = "Test Monitor") -> str:
+def create_monitor(client: TestClient, headers: dict[str, str], name: str = "Test Monitor") -> str:
     response = client.post(
         "/monitors",
         json={
@@ -16,12 +16,13 @@ def create_monitor(client: TestClient, name: str = "Test Monitor") -> str:
             "timeout_seconds": 30,
             "expected_status": 200,
         },
+        headers=headers,
     )
     return response.json()["id"]
 
 
 @patch("app.application.health_check_service.HealthCheckClient.check")
-def test_dashboard_summary(mock_check, client: TestClient):
+def test_dashboard_summary(mock_check, client: TestClient, auth_headers: dict[str, str]):
     mock_check.return_value = CheckResultData(
         status="up",
         http_status=200,
@@ -29,8 +30,8 @@ def test_dashboard_summary(mock_check, client: TestClient):
         error_message=None,
     )
 
-    create_monitor(client)
-    response = client.get("/dashboard/summary")
+    create_monitor(client, auth_headers)
+    response = client.get("/dashboard/summary", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total_monitors"] >= 1
@@ -40,7 +41,7 @@ def test_dashboard_summary(mock_check, client: TestClient):
 
 
 @patch("app.application.health_check_service.HealthCheckClient.check")
-def test_dashboard_uptime(mock_check, client: TestClient):
+def test_dashboard_uptime(mock_check, client: TestClient, auth_headers: dict[str, str]):
     mock_check.return_value = CheckResultData(
         status="up",
         http_status=200,
@@ -48,10 +49,10 @@ def test_dashboard_uptime(mock_check, client: TestClient):
         error_message=None,
     )
 
-    monitor_id = create_monitor(client)
-    client.post(f"/health-check/{monitor_id}")
+    monitor_id = create_monitor(client, auth_headers)
+    client.post(f"/health-check/{monitor_id}", headers=auth_headers)
 
-    response = client.get(f"/dashboard/uptime/{monitor_id}")
+    response = client.get(f"/dashboard/uptime/{monitor_id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["monitor_id"] == monitor_id
@@ -60,7 +61,7 @@ def test_dashboard_uptime(mock_check, client: TestClient):
 
 
 @patch("app.application.health_check_service.HealthCheckClient.check")
-def test_dashboard_latency(mock_check, client: TestClient):
+def test_dashboard_latency(mock_check, client: TestClient, auth_headers: dict[str, str]):
     mock_check.return_value = CheckResultData(
         status="up",
         http_status=200,
@@ -68,10 +69,10 @@ def test_dashboard_latency(mock_check, client: TestClient):
         error_message=None,
     )
 
-    monitor_id = create_monitor(client)
-    client.post(f"/health-check/{monitor_id}")
+    monitor_id = create_monitor(client, auth_headers)
+    client.post(f"/health-check/{monitor_id}", headers=auth_headers)
 
-    response = client.get(f"/dashboard/latency/{monitor_id}")
+    response = client.get(f"/dashboard/latency/{monitor_id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["monitor_id"] == monitor_id
@@ -80,8 +81,8 @@ def test_dashboard_latency(mock_check, client: TestClient):
     assert data["p99_latency_ms"] == 150.0
 
 
-def test_dashboard_incident_summary(client: TestClient):
-    response = client.get("/dashboard/incidents")
+def test_dashboard_incident_summary(client: TestClient, auth_headers: dict[str, str]):
+    response = client.get("/dashboard/incidents", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert "total" in data
@@ -91,7 +92,7 @@ def test_dashboard_incident_summary(client: TestClient):
 
 
 @patch("app.application.health_check_service.HealthCheckClient.check")
-def test_dashboard_availability(mock_check, client: TestClient):
+def test_dashboard_availability(mock_check, client: TestClient, auth_headers: dict[str, str]):
     mock_check.return_value = CheckResultData(
         status="up",
         http_status=200,
@@ -99,10 +100,10 @@ def test_dashboard_availability(mock_check, client: TestClient):
         error_message=None,
     )
 
-    monitor_id = create_monitor(client)
-    client.post(f"/health-check/{monitor_id}")
+    monitor_id = create_monitor(client, auth_headers)
+    client.post(f"/health-check/{monitor_id}", headers=auth_headers)
 
-    response = client.get(f"/dashboard/availability/{monitor_id}")
+    response = client.get(f"/dashboard/availability/{monitor_id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["monitor_id"] == monitor_id
@@ -110,7 +111,7 @@ def test_dashboard_availability(mock_check, client: TestClient):
 
 
 @patch("app.application.health_check_service.HealthCheckClient.check")
-def test_dashboard_check_history(mock_check, client: TestClient):
+def test_dashboard_check_history(mock_check, client: TestClient, auth_headers: dict[str, str]):
     mock_check.return_value = CheckResultData(
         status="up",
         http_status=200,
@@ -118,10 +119,10 @@ def test_dashboard_check_history(mock_check, client: TestClient):
         error_message=None,
     )
 
-    monitor_id = create_monitor(client)
-    client.post(f"/health-check/{monitor_id}")
+    monitor_id = create_monitor(client, auth_headers)
+    client.post(f"/health-check/{monitor_id}", headers=auth_headers)
 
-    response = client.get(f"/dashboard/history/{monitor_id}")
+    response = client.get(f"/dashboard/history/{monitor_id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["monitor_id"] == monitor_id

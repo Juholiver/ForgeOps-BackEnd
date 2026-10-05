@@ -3,8 +3,11 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.domain.models import User
 from app.infrastructure.database import get_db
 from app.infrastructure.models import Base
+from app.infrastructure.repositories import UserRepository
+from app.infrastructure.security import create_access_token
 from app.main import app
 
 
@@ -33,3 +36,31 @@ def client(session: AsyncSession) -> TestClient:
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def user(session: AsyncSession) -> User:
+    repo = UserRepository(session)
+    return await repo.create(
+        User(name="Auth User", email="auth-user@example.com", password_hash=None)
+    )
+
+
+@pytest.fixture
+def auth_headers(user: User) -> dict[str, str]:
+    token = create_access_token(user.id, user.role.value)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def other_user(session: AsyncSession) -> User:
+    repo = UserRepository(session)
+    return await repo.create(
+        User(name="Other User", email="other-user@example.com", password_hash=None)
+    )
+
+
+@pytest.fixture
+def other_headers(other_user: User) -> dict[str, str]:
+    token = create_access_token(other_user.id, other_user.role.value)
+    return {"Authorization": f"Bearer {token}"}

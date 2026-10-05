@@ -72,7 +72,7 @@ class DashboardRepository:
         index = min(index, len(sorted_values) - 1)
         return sorted_values[index]
 
-    async def get_incident_summary(self) -> tuple[int, int, int, int]:
+    async def get_incident_summary(self, user_id: UUID) -> tuple[int, int, int, int]:
         result = await self.session.execute(
             select(
                 func.count(Incident.id),
@@ -96,6 +96,8 @@ class DashboardRepository:
                     )
                 ),
             )
+            .join(Monitor, Incident.monitor_id == Monitor.id)
+            .where(Monitor.user_id == user_id)
         )
         row = result.one()
         return (
@@ -145,38 +147,59 @@ class DashboardRepository:
         return checks, total
 
     async def get_dashboard_summary(
-        self, since: datetime
+        self, since: datetime, user_id: UUID
     ) -> tuple[int, int, int, int, int, float, float]:
-        monitors_total = (await self.session.execute(select(func.count(Monitor.id)))).scalar() or 0
+        monitors_total = (
+            await self.session.execute(
+                select(func.count(Monitor.id)).where(Monitor.user_id == user_id)
+            )
+        ).scalar() or 0
         monitors_active = (
             await self.session.execute(
-                select(func.count(Monitor.id)).where(Monitor.active.is_(True))
+                select(func.count(Monitor.id)).where(
+                    Monitor.user_id == user_id,
+                    Monitor.active.is_(True),
+                )
             )
         ).scalar() or 0
         checks_total = (
             await self.session.execute(
-                select(func.count(CheckResult.id)).where(CheckResult.checked_at >= since)
+                select(func.count(CheckResult.id))
+                .join(Monitor, CheckResult.monitor_id == Monitor.id)
+                .where(Monitor.user_id == user_id, CheckResult.checked_at >= since)
             )
         ).scalar() or 0
         incidents_total = (
-            await self.session.execute(select(func.count(Incident.id)))
+            await self.session.execute(
+                select(func.count(Incident.id))
+                .join(Monitor, Incident.monitor_id == Monitor.id)
+                .where(Monitor.user_id == user_id)
+            )
         ).scalar() or 0
         incidents_open = (
             await self.session.execute(
-                select(func.count(Incident.id)).where(Incident.status == IncidentStatus.OPEN)
+                select(func.count(Incident.id))
+                .join(Monitor, Incident.monitor_id == Monitor.id)
+                .where(
+                    Monitor.user_id == user_id,
+                    Incident.status == IncidentStatus.OPEN,
+                )
             )
         ).scalar() or 0
         avg_uptime_row = (
             await self.session.execute(
-                select(func.avg(case((CheckResult.status == "up", 1.0), else_=0.0))).where(
-                    CheckResult.checked_at >= since
-                )
+                select(func.avg(case((CheckResult.status == "up", 1.0), else_=0.0)))
+                .join(Monitor, CheckResult.monitor_id == Monitor.id)
+                .where(Monitor.user_id == user_id, CheckResult.checked_at >= since)
             )
         ).scalar()
         avg_uptime = (avg_uptime_row or 0.0) * 100
         avg_latency_row = (
             await self.session.execute(
-                select(func.avg(CheckResult.response_time_ms)).where(
+                select(func.avg(CheckResult.response_time_ms))
+                .join(Monitor, CheckResult.monitor_id == Monitor.id)
+                .where(
+                    Monitor.user_id == user_id,
                     CheckResult.checked_at >= since,
                     CheckResult.response_time_ms.is_not(None),
                 )

@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import Incident, IncidentStatus
+from app.domain.models import Incident, IncidentStatus, Monitor
 
 
 class IncidentRepository:
@@ -20,10 +20,18 @@ class IncidentRepository:
         page_size: int = 20,
         status: IncidentStatus | None = None,
         monitor_id: UUID | None = None,
+        user_id: UUID | None = None,
     ) -> tuple[list[Incident], int]:
         query = select(Incident)
         count_query = select(func.count(Incident.id))
 
+        if user_id is not None:
+            query = query.join(Monitor, Incident.monitor_id == Monitor.id).where(
+                Monitor.user_id == user_id
+            )
+            count_query = count_query.join(Monitor, Incident.monitor_id == Monitor.id).where(
+                Monitor.user_id == user_id
+            )
         if status:
             query = query.where(Incident.status == status)
             count_query = count_query.where(Incident.status == status)

@@ -13,6 +13,7 @@ from app.domain.incident_schemas import (
 )
 from app.domain.models import Incident, IncidentStatus
 from app.infrastructure.incident_repository import IncidentRepository
+from app.infrastructure.monitor_repository import MonitorRepository
 
 logger = structlog.get_logger()
 
@@ -21,6 +22,7 @@ class IncidentService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.incident_repo = IncidentRepository(session)
+        self.monitor_repo = MonitorRepository(session)
         self.audit = AuditService(session)
 
     async def process_check_result(
@@ -81,8 +83,12 @@ class IncidentService:
         page_size: int = 20,
         status: IncidentStatus | None = None,
         monitor_id: UUID | None = None,
+        *,
+        user_id: UUID,
     ) -> IncidentListResponse:
-        incidents, total = await self.incident_repo.list(page, page_size, status, monitor_id)
+        incidents, total = await self.incident_repo.list(
+            page, page_size, status, monitor_id, user_id
+        )
         return IncidentListResponse(
             items=[IncidentResponse.model_validate(i) for i in incidents],
             total=total,
@@ -90,16 +96,23 @@ class IncidentService:
             page_size=page_size,
         )
 
-    async def get_incident(self, incident_id: UUID) -> IncidentResponse:
+    async def _get_owned_incident(self, incident_id: UUID, user_id: UUID) -> Incident:
         incident = await self.incident_repo.get_by_id(incident_id)
         if not incident:
             raise ValueError("Incident not found")
+        monitor = await self.monitor_repo.get_by_id(incident.monitor_id)
+        if not monitor or monitor.user_id != user_id:
+            raise ValueError("Incident not found")
+        return incident
+
+    async def get_incident(self, incident_id: UUID, user_id: UUID) -> IncidentResponse:
+        incident = await self._get_owned_incident(incident_id, user_id)
         return IncidentResponse.model_validate(incident)
 
-    async def update_incident(self, incident_id: UUID, data: IncidentUpdate) -> IncidentResponse:
-        incident = await self.incident_repo.get_by_id(incident_id)
-        if not incident:
-            raise ValueError("Incident not found")
+    async def update_incident(
+        self, incident_id: UUID, data: IncidentUpdate, user_id: UUID
+    ) -> IncidentResponse:
+        incident = await self._get_owned_incident(incident_id, user_id)
 
         if data.status == IncidentStatus.RESOLVED:
             incident.resolved_at = datetime.now(UTC)
@@ -109,6 +122,7 @@ class IncidentService:
         await self.audit.log(
             action="incident.update",
             resource="incident",
+            user_id=user_id,
             resource_id=str(incident.id),
             metadata={"status": data.status.value},
         )

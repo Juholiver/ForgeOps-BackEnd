@@ -15,7 +15,11 @@ class MonitorRepository:
         return result.scalar_one_or_none()
 
     async def list(
-        self, page: int = 1, page_size: int = 20, active_only: bool = False
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        active_only: bool = False,
+        user_id: UUID | None = None,
     ) -> tuple[list[Monitor], int]:
         query = select(Monitor)
         count_query = select(func.count(Monitor.id))
@@ -23,6 +27,9 @@ class MonitorRepository:
         if active_only:
             query = query.where(Monitor.active.is_(True))
             count_query = count_query.where(Monitor.active.is_(True))
+        if user_id is not None:
+            query = query.where(Monitor.user_id == user_id)
+            count_query = count_query.where(Monitor.user_id == user_id)
 
         total_result = await self.session.execute(count_query)
         total = total_result.scalar() or 0

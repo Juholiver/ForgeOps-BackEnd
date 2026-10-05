@@ -12,14 +12,22 @@ from app.domain.dashboard_schemas import (
     UptimeResponse,
 )
 from app.infrastructure.dashboard_repository import DashboardRepository
+from app.infrastructure.monitor_repository import MonitorRepository
 
 
 class DashboardService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.dashboard_repo = DashboardRepository(session)
+        self.monitor_repo = MonitorRepository(session)
 
-    async def get_uptime(self, monitor_id: UUID, days: int = 7) -> UptimeResponse:
+    async def _ensure_monitor_ownership(self, monitor_id: UUID, user_id: UUID) -> None:
+        monitor = await self.monitor_repo.get_by_id(monitor_id)
+        if not monitor or monitor.user_id != user_id:
+            raise ValueError("Monitor not found")
+
+    async def get_uptime(self, monitor_id: UUID, days: int = 7, *, user_id: UUID) -> UptimeResponse:
+        await self._ensure_monitor_ownership(monitor_id, user_id)
         since = datetime.now(UTC) - timedelta(days=days)
         total, success = await self.dashboard_repo.get_uptime(monitor_id, since)
         uptime_pct = (success / total * 100) if total > 0 else 100.0
@@ -32,7 +40,10 @@ class DashboardService:
             period_end=datetime.now(UTC),
         )
 
-    async def get_latency(self, monitor_id: UUID, days: int = 7) -> LatencyResponse:
+    async def get_latency(
+        self, monitor_id: UUID, days: int = 7, *, user_id: UUID
+    ) -> LatencyResponse:
+        await self._ensure_monitor_ownership(monitor_id, user_id)
         since = datetime.now(UTC) - timedelta(days=days)
         avg, p95, p99, min_lat, max_lat, total = await self.dashboard_repo.get_latency_stats(
             monitor_id, since
@@ -47,13 +58,13 @@ class DashboardService:
             total_checks=total,
         )
 
-    async def get_incident_summary(self) -> IncidentSummaryResponse:
+    async def get_incident_summary(self, *, user_id: UUID) -> IncidentSummaryResponse:
         (
             total,
             open_count,
             investigating,
             resolved,
-        ) = await self.dashboard_repo.get_incident_summary()
+        ) = await self.dashboard_repo.get_incident_summary(user_id)
         return IncidentSummaryResponse(
             total=total,
             open=open_count,
@@ -61,7 +72,10 @@ class DashboardService:
             resolved=resolved,
         )
 
-    async def get_availability(self, monitor_id: UUID, days: int = 7) -> AvailabilityResponse:
+    async def get_availability(
+        self, monitor_id: UUID, days: int = 7, *, user_id: UUID
+    ) -> AvailabilityResponse:
+        await self._ensure_monitor_ownership(monitor_id, user_id)
         since = datetime.now(UTC) - timedelta(days=days)
         total, failed = await self.dashboard_repo.get_availability(monitor_id, since)
         availability_pct = ((total - failed) / total * 100) if total > 0 else 100.0
@@ -80,7 +94,10 @@ class DashboardService:
         page: int = 1,
         page_size: int = 50,
         days: int = 7,
+        *,
+        user_id: UUID,
     ) -> CheckHistoryResponse:
+        await self._ensure_monitor_ownership(monitor_id, user_id)
         since = datetime.now(UTC) - timedelta(days=days)
         checks, total = await self.dashboard_repo.get_check_history(
             monitor_id, page, page_size, since
@@ -103,7 +120,7 @@ class DashboardService:
             page_size=page_size,
         )
 
-    async def get_dashboard_summary(self) -> DashboardSummaryResponse:
+    async def get_dashboard_summary(self, *, user_id: UUID) -> DashboardSummaryResponse:
         since = datetime.now(UTC) - timedelta(days=7)
         (
             total_monitors,
@@ -113,7 +130,7 @@ class DashboardService:
             open_incidents,
             avg_uptime,
             avg_latency,
-        ) = await self.dashboard_repo.get_dashboard_summary(since)
+        ) = await self.dashboard_repo.get_dashboard_summary(since, user_id)
         return DashboardSummaryResponse(
             total_monitors=total_monitors,
             active_monitors=active_monitors,
