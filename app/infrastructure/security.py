@@ -8,6 +8,7 @@ from app.core.config import settings
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+OAUTH_STATE_EXPIRE_MINUTES = 10
 
 
 def hash_password(password: str) -> str:
@@ -45,3 +46,18 @@ def decode_token(token: str) -> dict[str, object] | None:
         return payload
     except JWTError:
         return None
+
+
+def create_oauth_state() -> str:
+    now = datetime.now(UTC)
+    payload: dict[str, object] = {
+        "type": "oauth_state",
+        "iat": now,
+        "exp": now + timedelta(minutes=OAUTH_STATE_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, settings.APP_SECRET_KEY, algorithm="HS256")
+
+
+def is_valid_oauth_state(state: str) -> bool:
+    payload = decode_token(state)
+    return payload is not None and payload.get("type") == "oauth_state"
