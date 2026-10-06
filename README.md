@@ -1,7 +1,7 @@
 # ForgeOps Backend
 
 API do ForgeOps — plataforma de monitoramento e observabilidade de APIs HTTP.
-FastAPI + SQLAlchemy 2 (async) + Alembic + PostgreSQL, com workers Celery/RabbitMQ,
+FastAPI + SQLAlchemy 2 (async) + Alembic + PostgreSQL, com workers Celery (broker Redis),
 cache Redis, métricas Prometheus e dashboards Grafana.
 
 > Este repositório é a metade backend do projeto ForgeOps. O frontend (React) vive em
@@ -15,7 +15,7 @@ cache Redis, métricas Prometheus e dashboards Grafana.
 | API | Python 3.12+, FastAPI, Pydantic |
 | Banco | PostgreSQL 16 (fallback SQLite para dev local) |
 | Cache / locks | Redis 7 |
-| Filas | RabbitMQ + Celery worker/beat |
+| Filas | Redis (broker/result) + Celery worker/beat |
 | Migrações | Alembic |
 | Observabilidade | Prometheus, Grafana, Structured Logging (structlog) |
 | Testes | Pytest + pytest-asyncio + coverage |
@@ -59,7 +59,8 @@ docker compose up -d --build
 ```
 
 Serviços: `backend` (:8000), `worker`, `scheduler`, `postgres` (:5432), `redis` (:6379),
-`rabbitmq` (:5672/:15672), `prometheus` (:9090), `grafana` (:3000).
+`rabbitmq` (:5672/:15672, ocioso — o broker do Celery é o Redis), `prometheus` (:9090),
+`grafana` (:3000).
 
 Para o frontend, repositório [`forgeops-frontend`](https://github.com/OWNER/forgeops-frontend).
 
@@ -73,7 +74,7 @@ O arquivo [`.env.example`](.env.example) documenta todas as variáveis. Principa
 | `APP_SECRET_KEY` | `change-me-in-production` | Chave JWT (**obrigatória em produção**) |
 | `DB_BACKEND` | `postgres` | `postgres` ou `sqlite` (dev sem Docker) |
 | `POSTGRES_*` | `forgeops` | Credenciais/host do banco |
-| `RABBITMQ_*` | `forgeops` | Credenciais/host da fila |
+| `RABBITMQ_*` | `forgeops` | Legado (broker agora é Redis); `RABBITMQ_PASSWORD` ainda é validado em produção |
 | `CORS_ORIGINS` | `["http://localhost:3000"]` | Origens permitidas (use o domínio do frontend em produção) |
 | `GOOGLE_CLIENT_ID` | — | Client ID OAuth 2.0 do Google Cloud |
 | `GOOGLE_CLIENT_SECRET` | — | Client Secret OAuth 2.0 do Google Cloud |

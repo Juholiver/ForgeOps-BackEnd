@@ -4,7 +4,7 @@ from app.core.config import settings
 
 celery_app = Celery(
     "forgeops",
-    broker=settings.rabbitmq_url,
+    broker=settings.redis_url,
     backend=settings.redis_url,
     include=["app.workers.tasks"],
 )
