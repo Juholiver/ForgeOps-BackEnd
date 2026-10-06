@@ -1,6 +1,6 @@
 """google_oauth_and_user_isolation
 
-Revision ID: 0003_google_oauth_and_user_isolation
+Revision ID: 0003_google_oauth_isolation
 Revises: 0002_performance_indexes
 Create Date: 2026-10-05 00:00:00.000000
 
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0003_google_oauth_and_user_isolation"
+revision: str = "0003_google_oauth_isolation"
 down_revision: str | None = "0002_performance_indexes"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
